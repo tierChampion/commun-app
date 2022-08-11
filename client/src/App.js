@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { HouseRounded } from "@material-ui/icons";
 import Axios from "axios";
 import "./App.css";
 
@@ -8,6 +9,8 @@ import "./App.css";
 
 function App() {
   const [trees, setTrees] = useState([]);
+
+  const HOUSE_DIM = 50;
 
   /*
   Calculates the position to send to the database
@@ -30,7 +33,7 @@ function App() {
     var x = posX * document.getElementById("Map").clientWidth;
     var y = posY * document.getElementById("Map").clientHeight;
 
-    return [x, y];
+    return [x - HOUSE_DIM / 2, y - HOUSE_DIM / 2];
   };
 
   /*
@@ -76,20 +79,18 @@ function App() {
             var pos = positionToPixels(tree.x, tree.y);
 
             return (
-              <div
+              <HouseRounded
                 className="not-selectable"
                 key={tree.id}
                 style={{
                   color: "white",
-                  position: "relative",
+                  position: "absolute",
                   left: pos[0],
                   top: pos[1],
-                  width: 0,
-                  height: 0,
+                  width: HOUSE_DIM,
+                  height: HOUSE_DIM,
                 }}
-              >
-                yo
-              </div>
+              />
             );
           })}
         </div>
