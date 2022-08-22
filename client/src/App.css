@@ -31,8 +31,8 @@ body {
 .Map {
   display: block;
   position: relative;
-  align-items: left;
-  text-align: left;
+  align-items: center;
+  text-align: center;
   width: 100%;
   height: 93%;
   background-color: black;
