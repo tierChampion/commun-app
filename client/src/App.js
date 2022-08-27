@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { EmojiPeopleRounded } from "@material-ui/icons";
 import Axios from "axios";
 import "./App.css";
+import Inhabitant from "./Inhabitant";
 
 /**
  * Brainstorm ideas:
@@ -16,7 +16,9 @@ import "./App.css";
 /**
  * --> TODOS:
  *
- * + Add a buble for the username of the characters
+ * + Add a drag event
+ * + Add a click event on the characters to show the menu to speak to him
+ * +
  * + Add accounts to make the characters unique
  * + Implement the hello functionnalities
  * ...
@@ -24,51 +26,53 @@ import "./App.css";
  */
 
 function App() {
+  // Raw Data
   const [trees, setTrees] = useState([]);
 
-  const [center, setCenter] = useState([0.5, 0.5]);
-
+  /**
+   * Zooming parameters
+   */
+  const MAX_ZOOM = 5;
+  const MIN_ZOOM = 0.1;
+  const [corner, setCorner] = useState([0, 0]);
   const [zoom, setZoom] = useState(1);
 
   const USER_DIM = 50;
-  const MAX_ZOOM = 1;
-  const MIN_ZOOM = 0.1;
 
+  const clamp = (val, max, min) => {
+    return Math.min(Math.max(val, min), max);
+  };
+
+  /**
+   * Zooming event on the map.
+   * @param event React mouse roll event
+   */
   const zoomIn = (event) => {
-    console.log(event);
+    // Zooming
+    var scrollDelta = -event.deltaY;
+    var newZoom = zoom + (scrollDelta > 0 ? 0.1 : -0.1) * zoom;
+    setZoom(clamp(newZoom, MAX_ZOOM, MIN_ZOOM));
 
+    // Setting the corner of the screen
     var x = event.clientX - event.target.offsetLeft;
     var y = event.clientY - event.target.offsetTop;
 
     var screenX = x / event.target.clientWidth;
     var screenY = y / event.target.clientHeight;
 
-    // Send position in screen percentage
-    /*
-    setCenter([
-      (screenX - 0.5) / zoom + center[0],
-      (screenY - 0.5) / zoom + center[1],
+    var pixelX = screenX / zoom + corner[0];
+    var pixelY = screenY / zoom + corner[1];
+
+    setCorner([
+      clamp(pixelX - 0.5 / zoom, 1 / MIN_ZOOM - 1 / zoom, 0),
+      clamp(pixelY - 0.5 / zoom, 1 / MIN_ZOOM - 1 / zoom, 0),
     ]);
-    */
-    var delta = -event.deltaY;
-
-    var newZoom = zoom + (0.01 * delta) / (MAX_ZOOM - zoom);
-
-    if (newZoom < MIN_ZOOM && delta < 0) {
-      newZoom = MIN_ZOOM;
-    } else if (newZoom > MAX_ZOOM && delta > 0) {
-      newZoom = MAX_ZOOM;
-    }
-
-    // Event works just
-    /*
-    setZoom(newZoom);
-    */
   };
 
-  /*
-  Calculates the position to send to the database
-  */
+  /**
+   * Calculates the position to send to the database
+   * @param event React click mouse event
+   */
   const calculatePosition = (event) => {
     var x = event.clientX - event.target.offsetLeft;
     var y = event.clientY - event.target.offsetTop;
@@ -77,18 +81,17 @@ function App() {
     var screenY = y / event.target.clientHeight;
 
     // Send position in screen percentage
-    sendPosition(
-      (screenX - 0.5) / zoom + center[0],
-      (screenY - 0.5) / zoom + center[1]
-    );
+    sendPosition(screenX / zoom + corner[0], screenY / zoom + corner[1]);
   };
 
-  /*
-  Converts from screen percentage to pixel position
-  */
+  /**
+   * Converts from screen percentage to pixel position
+   * @param {int} posX Lateral position in pixels
+   * @param {int} posY Vertical position in pixels
+   */
   const positionToPixels = (posX, posY) => {
-    var remappedX = (posX - center[0]) * zoom + 0.5;
-    var remappedY = (posY - center[1]) * zoom + 0.5;
+    var remappedX = (posX - corner[0]) * zoom;
+    var remappedY = (posY - corner[1]) * zoom;
 
     var x = remappedX * document.getElementById("Map").clientWidth;
     var y = remappedY * document.getElementById("Map").clientHeight;
@@ -96,15 +99,19 @@ function App() {
     return [x - (USER_DIM * zoom) / 2, y - (USER_DIM * zoom) / 2];
   };
 
-  /*
-  Initial filling of the screen
-  */
+  /**
+   * Initial filling of the screen with the raw data.
+   */
   useEffect(() => {
     getPositions();
   }, []);
 
+  /**
+   * Api call to add position to database.
+   * @param {float} x
+   * @param {float} y
+   */
   const sendPosition = (x, y) => {
-    // todo
     Axios.post("http://localhost:3001/api/insert", { x: x, y: y }).then(
       (response) => {
         setTrees((old) => [...old, response.data]);
@@ -112,15 +119,19 @@ function App() {
     );
   };
 
+  /**
+   * Api call to read positions from database
+   */
   const getPositions = () => {
-    // todo
     Axios.get("http://localhost:3001/api/get").then((response) => {
       setTrees(response.data);
     });
   };
 
+  /**
+   * Api call to remove all positions from database.
+   */
   const clearPositions = () => {
-    // todo
     Axios.post("http://localhost:3001/api/reset").then((response) => {
       setTrees([]);
     });
@@ -129,7 +140,6 @@ function App() {
   return (
     <div className="App">
       <h1>commun</h1>
-
       <div className="Options">
         <div className="Buttons">
           <button onClick={clearPositions}>Clear table</button>
@@ -143,38 +153,18 @@ function App() {
           {trees.map((tree) => {
             var pos = positionToPixels(tree.x, tree.y);
 
-            return (
-              <>
-                <div
-                  className="not-selectable"
-                  key={tree.id}
-                  style={{
-                    color: "white",
-                    position: "absolute",
+            // put inside div that positions properly than have person and text inside that div
+            // remove the redundance of the similar styles
 
-                    left: pos[0],
-                    top: pos[1],
-                    width: 0,
-                    height: 0,
-                  }}
-                >
-                  hello
-                </div>
-                <EmojiPeopleRounded
-                  className="not-selectable"
-                  key={tree.id}
-                  style={{
-                    color: "white",
-                    position: "absolute",
-                    left: pos[0],
-                    top: pos[1],
-                    width: USER_DIM * zoom,
-                    height: USER_DIM * zoom,
-                  }}
-                />
-              </>
+            return (
+              <Inhabitant
+                key={tree.id}
+                size={USER_DIM}
+                x={pos[0]}
+                y={pos[1]}
+                zoom={zoom}
+              />
             );
-            //}
           })}
         </div>
       </div>
