@@ -2,30 +2,43 @@ import React, { useState } from "react";
 import EmojiPeopleRoundedIcon from "@mui/icons-material/EmojiPeopleRounded";
 import HandshakeRoundedIcon from "@mui/icons-material/HandshakeRounded";
 
-import "./App.css";
+import Axios from "axios";
+import "./inhabitant.css";
 
 function Inhabitant(props) {
   const INHABITANT_DIMS = props.size;
-  const BUBBLE_DIM = 100;
+
+  const calculateTextWidth = (text) => {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    context.font = getComputedStyle(document.body).font;
+    return context.measureText(text).width;
+  };
+
+  const BUBBLE_WIDTH = 30 + calculateTextWidth(props.userName);
+  const BUBBLE_HEIGHT = 30;
 
   const [isFocused, setFocusing] = useState(false);
   const [spokenTo, setSpokenTo] = useState(false);
 
+  /**
+   * Api call to add position to database.
+   * @param {float} x
+   * @param {float} y
+   */
+  const sayHello = (id) => {
+    Axios.post("http://localhost:3001/api/hello", { id: id }).then(
+      (response) => {
+        console.log("yo");
+      }
+    );
+  };
+
   return (
-    <div>
+    <div className="inhabitant" style={{ left: props.x, top: props.y }}>
       {/* Username bubble */}
       {isFocused && (
         <div style={{ opacity: 0.5 }}>
-          <div
-            className="arrow"
-            style={{
-              position: "absolute",
-              backgroundColor: "grey",
-              left: (props.x - BUBBLE_DIM / 4) * props.zoom,
-              top: (props.y - 10) * props.zoom, // size of border of arrow maybe make a variable?
-              borderRadius: 5,
-            }}
-          />
           <div
             className="not-selectable"
             style={{
@@ -33,25 +46,22 @@ function Inhabitant(props) {
               backgroundColor: "grey",
               position: "absolute",
               textAlign: "center",
-              left: (props.x - BUBBLE_DIM / 4) * props.zoom,
-              top: (props.y - BUBBLE_DIM / 4) * props.zoom,
-              width: BUBBLE_DIM * props.zoom,
-              height: (BUBBLE_DIM / 4) * props.zoom,
-              borderRadius: 5,
+              left: (INHABITANT_DIMS / 2) * props.zoom - BUBBLE_WIDTH / 2,
+              top: -BUBBLE_HEIGHT,
+              width: BUBBLE_WIDTH,
+              height: BUBBLE_HEIGHT,
+              borderRadius: 8,
             }}
           >
-            yo
+            <span id="username">{props.userName}</span>
           </div>
         </div>
       )}
       {/* Inhabitant */}
       <EmojiPeopleRoundedIcon
-        className="selectable"
+        className="character"
         style={{
-          color: "white",
           position: "absolute",
-          left: props.x,
-          top: props.y,
           width: INHABITANT_DIMS * props.zoom,
           height: INHABITANT_DIMS * props.zoom,
         }}
@@ -60,10 +70,24 @@ function Inhabitant(props) {
           setSpokenTo(!spokenTo);
         }}
         onMouseEnter={() => setFocusing(true)}
-        onMouseLeave={() => setFocusing(false)}
+        onMouseLeave={() => {
+          setFocusing(false);
+        }}
       />
       {/* Say hello option */}
-      {spokenTo && <HandshakeRoundedIcon />}
+      {spokenTo && (
+        <HandshakeRoundedIcon
+          style={{
+            position: "absolute",
+            left: INHABITANT_DIMS,
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            sayHello(props.personId);
+            setSpokenTo(false);
+          }}
+        />
+      )}
     </div>
   );
 }
