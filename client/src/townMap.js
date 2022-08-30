@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from "react";
 import Axios from "axios";
 
-import "./app.css";
+import "./townMap.css";
 import Inhabitant from "./inhabitant";
+
+/**
+ * TODO here:
+ *
+ * - Comment the code a little bit
+ * - Fix the wheel scroll event
+ * - Add a mouse drag event to easily navigate on the map
+ * - Maybe change the visuals a bit of the map (make it not so monochrome add color ?)
+ * - Probably in the app, but find a way to keep the current user in check (accounts)
+ *
+ */
 
 function TownMap() {
   const [inhabitants, setInhabitants] = useState([]);
@@ -120,8 +131,8 @@ function TownMap() {
           <Inhabitant
             key={inhabitant.id}
             personId={inhabitant.id}
-            userName={"running away in what seems like yogurt"}
-            size={PEOPLE_DIM}
+            userName={"wat da dog doin?"}
+            characterSize={PEOPLE_DIM}
             x={pos[0]}
             y={pos[1]}
             zoom={zoom}

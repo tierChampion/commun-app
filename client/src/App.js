@@ -6,11 +6,9 @@ import TownMap from "./townMap";
 /**
  * --> TODOS:
  *
- * + Move the css of the map inside of a townmap.css
  * + Add a drag event for additional mouvement
  * + Fix the visuals for the inhabitants
  * -> Animate a fadein and move for the username and hello button
- * -> Make some kind of hello visible when pressing the button
  *
  * + Add accounts to make the characters unique
  * -> Add somekind of menu to log in / create an account

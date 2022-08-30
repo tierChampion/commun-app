@@ -30,18 +30,6 @@ body {
   flex-direction: row;
 }
 
-/* Map the populate */
-.Map {
-  display: block;
-  position: relative;
-  align-items: center;
-  text-align: center;
-  width: 100%;
-  height: 100%;
-  background-color: black;
-  overflow: hidden;
-}
-
 .selectable {
   /* Used for the objects that can be added for now. Interacts with the mouse */
   -webkit-touch-callout: none;
