@@ -1,10 +1,4 @@
-.inhabitant {
-  position: relative;
-  color: #eee;
-  width: 0;
-}
-
-.character {
+.clickable {
   -webkit-touch-callout: none;
   cursor: pointer;
 }
@@ -13,4 +7,64 @@
   -webkit-touch-callout: none;
   user-select: none;
   pointer-events: none;
+}
+
+.inhabitant {
+  position: relative;
+  color: #eee;
+  width: 0;
+}
+
+.test {
+  position: absolute;
+  color: rgb(0, 0, 0, 255);
+  background-color: grey;
+  text-align: center;
+  height: 30px;
+  animation: spawn-up 0.4s forwards;
+}
+
+@keyframes spawn-up {
+  0% {
+    opacity: 0;
+    top: 0px;
+  }
+  100% {
+    opacity: 1;
+    top: -35px;
+  }
+}
+
+.soft-appear {
+  animation: spawn-pop 0.75s forwards;
+}
+
+@keyframes spawn-pop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+    transform: scale(2);
+  }
+}
+
+.appear-disappear {
+  animation: fade-in-out 2s;
+}
+@keyframes fade-in-out {
+  0% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+
+  75% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }

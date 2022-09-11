@@ -80,6 +80,22 @@ server.post("/api/hello", (req, res) => {
   });
 });
 
+/**
+ * Modify the hello value of an element in the database
+ */
+server.post("/api/move", (req, res) => {
+  const id = req.body.id;
+  const x = req.body.x;
+  const y = req.body.y;
+
+  const sqlMove = "UPDATE population SET x = ?, y = ? WHERE id = ?";
+
+  db.query(sqlMove, [x, y, id], (err, result) => {
+    console.log(err);
+    res.send(result);
+  });
+});
+
 server.listen(process.env.PORT, () => {
   console.log("connected to host %i!", process.env.PORT);
 });

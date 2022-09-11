@@ -3,6 +3,7 @@ import Axios from "axios";
 
 import "./townMap.css";
 import Inhabitant from "./inhabitant";
+import { toMapSpace } from "./spaceChanges";
 
 /**
  * TODO here:
@@ -13,6 +14,7 @@ import Inhabitant from "./inhabitant";
  * - Maybe change the visuals a bit of the map (make it not so monochrome add color ?)
  * - Probably in the app, but find a way to keep the current user in check (accounts)
  *
+ * - Make the calculate position available to the inhabitant for the database adding.
  */
 
 function TownMap() {
@@ -62,79 +64,85 @@ function TownMap() {
   };
 
   /**
-   * Converts from screen percentage to pixel position
-   * @param {int} posX Lateral position in pixels
-   * @param {int} posY Vertical position in pixels
-   */
-  const positionToPixels = (posX, posY) => {
-    var remappedX = (posX - corner[0]) * zoom;
-    var remappedY = (posY - corner[1]) * zoom;
-
-    var x = remappedX * document.getElementById("Map").clientWidth;
-    var y = remappedY * document.getElementById("Map").clientHeight;
-
-    return [x - (PEOPLE_DIM * zoom) / 2, y - (PEOPLE_DIM * zoom) / 2];
-  };
-
-  /**
    * Zooming event on the map.
    * @param event React mouse roll event
    */
   const zoomIn = (event) => {
     // Zooming
     var scrollDelta = -event.deltaY;
-    var newZoom = zoom + (scrollDelta > 0 ? 0.1 : -0.1) * zoom;
+    var newZoom = zoom + (scrollDelta > 0 ? 0.05 : -0.05) * zoom;
     setZoom(clamp(newZoom, MAX_ZOOM, MIN_ZOOM));
 
     // Setting the corner of the screen
-    var x = event.clientX - event.target.offsetLeft;
-    var y = event.clientY - event.target.offsetTop;
+    var x = event.clientX - document.getElementById("Map").offsetLeft;
+    var y = event.clientY - document.getElementById("Map").offsetTop;
 
-    var screenX = x / event.target.clientWidth;
-    var screenY = y / event.target.clientHeight;
+    var newCenter = toMapSpace(
+      x,
+      y,
+      [
+        document.getElementById("Map").clientWidth,
+        document.getElementById("Map").clientHeight,
+      ],
+      corner,
+      zoom
+    );
 
-    var pixelX = screenX / zoom + corner[0];
-    var pixelY = screenY / zoom + corner[1];
+    // move slowly to newcenter, interpolate between the centers
 
     setCorner([
-      clamp(pixelX - 0.5 / zoom, 1 / MIN_ZOOM - 1 / zoom, 0),
-      clamp(pixelY - 0.5 / zoom, 1 / MIN_ZOOM - 1 / zoom, 0),
+      clamp(newCenter[0] - 0.5 / zoom, 1 / MIN_ZOOM - 1 / zoom, 0),
+      clamp(newCenter[1] - 0.5 / zoom, 1 / MIN_ZOOM - 1 / zoom, 0),
     ]);
   };
 
+  const dragMove = (event) => {
+    console.log(event);
+  };
+
   /**
-   * Calculates the position to send to the database
+   * Calculates map space position. Converts from pixel position to screen percentage.
    * @param event React click mouse event
+   * @return position in map space
    */
   const calculatePosition = (event) => {
     var x = event.clientX - event.target.offsetLeft;
     var y = event.clientY - event.target.offsetTop;
 
-    var screenX = x / event.target.clientWidth;
-    var screenY = y / event.target.clientHeight;
-
-    // Send position in screen percentage
-    sendPosition(screenX / zoom + corner[0], screenY / zoom + corner[1]);
+    return toMapSpace(
+      x,
+      y,
+      [event.target.clientWidth, event.target.clientHeight],
+      corner,
+      zoom
+    );
   };
 
   return (
     <div
       id="Map"
-      className="Map"
-      onMouseDown={calculatePosition}
-      onWheel={zoomIn}
+      className="town-map"
+      onMouseDown={(e) => {
+        let pos = calculatePosition(e);
+        sendPosition(pos[0], pos[1]);
+      }}
+      onWheel={(e) => {
+        e.stopPropagation();
+        zoomIn(e);
+      }}
+      onDrag={dragMove}
     >
       {inhabitants.map((inhabitant) => {
-        var pos = positionToPixels(inhabitant.x, inhabitant.y);
-
+        //var pos = positionToPixels(inhabitant.x, inhabitant.y);
         return (
           <Inhabitant
             key={inhabitant.id}
             personId={inhabitant.id}
             userName={"wat da dog doin?"}
             characterSize={PEOPLE_DIM}
-            x={pos[0]}
-            y={pos[1]}
+            x={inhabitant.x}
+            y={inhabitant.y}
+            corner={corner}
             zoom={zoom}
           />
         );
