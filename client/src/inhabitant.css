@@ -15,7 +15,16 @@
   width: 0;
 }
 
-.test {
+.movement-plane {
+  position: absolute;
+  background-color: transparent;
+  width: 1000px;
+  height: 1000px;
+  left: -500px;
+  top: -500px;
+}
+
+.bubble {
   position: absolute;
   color: rgb(0, 0, 0, 255);
   background-color: grey;
@@ -41,11 +50,13 @@
 
 @keyframes spawn-pop {
   from {
-    opacity: 0;
+    opacity: 0.3;
+    scale: 0;
   }
   to {
     opacity: 1;
-    transform: scale(2);
+    scale: 1;
+    transform: rotate(360deg);
   }
 }
 
@@ -56,15 +67,18 @@
   0% {
     opacity: 0;
   }
-  10% {
+  25% {
     opacity: 1;
+    scale: 1.3;
   }
 
   75% {
     opacity: 1;
+    scale: 1.3;
   }
 
   100% {
     opacity: 0;
+    scale: 2.5;
   }
 }

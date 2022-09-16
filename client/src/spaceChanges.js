@@ -1,3 +1,7 @@
+export function clamp(val, max, min) {
+  return Math.min(Math.max(val, min), max);
+}
+
 export function toPixelSpace(x, y, mapCorner, mapScale, screenDim) {
   var screenPercentX = (x - mapCorner[0]) * mapScale;
   var screenPercentY = (y - mapCorner[1]) * mapScale;

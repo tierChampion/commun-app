@@ -5,16 +5,14 @@ import ControlCameraRoundedIcon from "@mui/icons-material/ControlCameraRounded";
 
 import Axios from "axios";
 import "./inhabitant.css";
-import { toPixelSpace, toMapSpace } from "./spaceChanges";
+import { toPixelSpace, toMapSpace, clamp } from "./spaceChanges";
 
 /**
  * TODO in here:
  *
- * - Upgrade the visuals of the hello text and the other options (etc.)
- * - Make the functionality to add the character that was said hello to in a list
- * - Add a drag event to move the inhabitant (possibly restrain it after to only your character)
- *    => maybe have it on the right click so as to not clash with other stuff
- * <Check if operations in the database are atomic or if multiple users need to be carefully managed>
+ * - Highlight the character that is hovered over?
+ * - Make the functionality to add the character that was said hello to in a list to not say hello multiple times to the same person
+ * - Make the visuals better fit with different scales.
  */
 
 /**
@@ -35,16 +33,18 @@ function Inhabitant(props) {
     return context.measureText(text).width;
   };
 
-  // Dimensions
+  /// Dimensions ///
   const INHABITANT_DIMS = props.characterSize;
   const BUBBLE_WIDTH = 30 + calculateTextWidth(props.userName);
+  const BUTTON_DIMS = clamp(20 * props.zoom, 90, 30);
 
-  // Position
-
+  /// Positions ///
   const [x, setX] = useState();
   const [y, setY] = useState();
 
-  // Change position when rerendering by zooming
+  /**
+   * Hook to modify the character position when zooming and moving on the map.
+   */
   useEffect(() => {
     var pos = toPixelSpace(props.x, props.y, props.corner, props.zoom, [
       document.getElementById("Map").clientWidth,
@@ -55,23 +55,18 @@ function Inhabitant(props) {
     setY(pos[1]);
   }, [props.corner, props.zoom]);
 
-  // Flags for the different options
+  /// Flags for the different options ///
   const [isFocused, setFocusing] = useState(false);
   const [spokenTo, setSpokenTo] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
 
-  const onHover = (event) => {
-    if (!isMoving) setFocusing(true);
-  };
-
   /**
-   * Api call to say hello
+   * Api call to say hello. Shows the message for two seconds.
    * @param {int} id Number associated with the proper inhabitant to say hello to.
    */
   const sayHello = (id) => {
     Axios.post("http://localhost:3001/api/hello", { id: id }).then(() => {
-      // Open the message and close it after two seconds (2000 milliseconds)
       setIsSpeaking(true);
 
       setTimeout(() => {
@@ -80,6 +75,12 @@ function Inhabitant(props) {
     });
   };
 
+  /**
+   * Api call to change the position of the inhabitant in the database.
+   * @param {int} id
+   * @param {float} x
+   * @param {float} y
+   */
   const moveInhabitant = (id, x, y) => {
     Axios.post("http://localhost:3001/api/move", {
       id: id,
@@ -89,24 +90,34 @@ function Inhabitant(props) {
   };
 
   /**
-   * Mouve the character
-   * @param {*} event
+   * Sets the on screen position of the character to the cursor.
+   * @param {*} cursorX
+   * @param {*} cursorY
    */
-  const followMouse = (event) => {
-    // add event listener for mouse position
-    // once new position is found, change the info in the database
+  const positionToCursor = (cursorX, cursorY) => {
+    setX(
+      cursorX -
+        document.getElementById("Map").offsetLeft -
+        0.5 * INHABITANT_DIMS * props.zoom
+    );
+    // mouse position - map top position - 0.5 character size
+    setY(
+      cursorY -
+        document.getElementById("Map").offsetTop -
+        0.5 * INHABITANT_DIMS * props.zoom
+    );
+  };
 
-    // idea:
-    // Make the character follow the mouse in a special state where no other option is shown and the hover is disabled
-    // When the character register a click, instead of doing the usual, send the position to the database
-    // During the hover, instead of doing the usual, modify x and y
-
+  /**
+   * Move the character and make him follow the mouse.
+   */
+  const followMouse = (e) => {
     setIsMoving(true);
     setSpokenTo(false);
     setIsSpeaking(false);
     setFocusing(false);
 
-    setX(x - 1.25 * INHABITANT_DIMS * props.zoom + 10);
+    positionToCursor(e.clientX, e.clientY);
   };
 
   return (
@@ -115,9 +126,9 @@ function Inhabitant(props) {
       {isFocused && (
         <div style={{ opacity: 0.5 }}>
           <div
-            className="test not-selectable"
+            className="bubble not-selectable"
             style={{
-              left: (INHABITANT_DIMS / 2) * props.zoom - BUBBLE_WIDTH / 2,
+              left: (INHABITANT_DIMS / 2) * props.zoom - BUBBLE_WIDTH / 2, // x - 0.5 character size - 0.5 bubble width
               width: BUBBLE_WIDTH,
               borderRadius: 8,
             }}
@@ -135,14 +146,33 @@ function Inhabitant(props) {
           height: INHABITANT_DIMS * props.zoom,
         }}
         onMouseDown={(e) => {
-          e.stopPropagation();
-          if (!isMoving) setSpokenTo(!spokenTo);
-          else {
+          if (e.button === 0) {
+            e.stopPropagation();
+            setSpokenTo(!spokenTo);
+          }
+        }}
+        onMouseEnter={() => {
+          if (!isMoving) setFocusing(true);
+        }}
+        onMouseLeave={() => {
+          setFocusing(false);
+        }}
+      />
+      {isMoving && (
+        <div
+          className="movement-plane"
+          onMouseMove={(e) => {
+            if (isMoving) {
+              positionToCursor(e.clientX, e.clientY);
+            }
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
             setIsMoving(false);
 
             var pos = toMapSpace(
-              x + 0.5 * INHABITANT_DIMS * props.zoom,
-              y + 0.5 * INHABITANT_DIMS * props.zoom,
+              x,
+              y,
               [
                 document.getElementById("Map").clientWidth,
                 document.getElementById("Map").clientHeight,
@@ -152,28 +182,21 @@ function Inhabitant(props) {
             );
 
             moveInhabitant(props.personId, pos[0], pos[1]);
-          }
-        }}
-        onMouseEnter={onHover}
-        onMouseLeave={(e) => {
-          setFocusing(false);
-        }}
-        onMouseMove={(e) => {
-          if (isMoving) {
-            setX(e.clientX - 0.5 * INHABITANT_DIMS * props.zoom);
-            setY(e.clientY - 2 * INHABITANT_DIMS * props.zoom);
-          }
-        }}
-      />
+          }}
+        />
+      )}
       {/* Say hello button and move button */}
       {spokenTo && (
         <>
           <HandshakeRoundedIcon
             className="clickable soft-appear"
             style={{
+              // maybe change the size a little bit with scale so the buttons aren't super huge
               position: "absolute",
-              left: INHABITANT_DIMS * props.zoom + 10 * props.zoom,
-              top: 10,
+              width: BUTTON_DIMS,
+              height: BUTTON_DIMS,
+              left: INHABITANT_DIMS * props.zoom, // character size plus extra of 0.5 size
+              top: 10 * props.zoom, // extra of 0.5 size
             }}
             onMouseDown={(e) => {
               e.stopPropagation();
@@ -184,11 +207,13 @@ function Inhabitant(props) {
           <ControlCameraRoundedIcon
             className="clickable soft-appear"
             style={{
+              // maybe change the size a little bit with scale so the buttons aren't super huge
               position: "absolute",
               alignSelf: "right",
-
-              left: -10,
-              top: 10,
+              width: BUTTON_DIMS,
+              height: BUTTON_DIMS,
+              left: -BUTTON_DIMS, // about -1.5 size (less to account for asymmetry)
+              top: 10 * props.zoom, // extra of 0.5 size
             }}
             onMouseDown={(e) => {
               e.stopPropagation();

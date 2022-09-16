@@ -3,18 +3,14 @@ import Axios from "axios";
 
 import "./townMap.css";
 import Inhabitant from "./inhabitant";
-import { toMapSpace } from "./spaceChanges";
+import { toMapSpace, clamp } from "./spaceChanges";
 
 /**
  * TODO here:
  *
- * - Comment the code a little bit
- * - Fix the wheel scroll event
- * - Add a mouse drag event to easily navigate on the map
+ * - Fix the wheel scroll event. Make the middle not move to fast to the mouse
  * - Maybe change the visuals a bit of the map (make it not so monochrome add color ?)
  * - Probably in the app, but find a way to keep the current user in check (accounts)
- *
- * - Make the calculate position available to the inhabitant for the database adding.
  */
 
 function TownMap() {
@@ -27,6 +23,7 @@ function TownMap() {
   const MIN_ZOOM = 0.1;
   const [corner, setCorner] = useState([0, 0]);
   const [zoom, setZoom] = useState(1);
+  const [dragging, setDragging] = useState(false);
 
   const PEOPLE_DIM = 50;
 
@@ -36,10 +33,6 @@ function TownMap() {
   useEffect(() => {
     getPositions();
   }, []);
-
-  const clamp = (val, max, min) => {
-    return Math.min(Math.max(val, min), max);
-  };
 
   /**
    * Api call to read positions from database
@@ -98,6 +91,20 @@ function TownMap() {
 
   const dragMove = (event) => {
     console.log(event);
+    setCorner([
+      clamp(
+        corner[0] -
+          event.movementX / document.getElementById("Map").clientWidth,
+        1 / MIN_ZOOM - 1 / zoom,
+        0
+      ),
+      clamp(
+        corner[1] -
+          event.movementY / document.getElementById("Map").clientHeight,
+        1 / MIN_ZOOM - 1 / zoom,
+        0
+      ),
+    ]);
   };
 
   /**
@@ -122,18 +129,29 @@ function TownMap() {
     <div
       id="Map"
       className="town-map"
-      onMouseDown={(e) => {
-        let pos = calculatePosition(e);
-        sendPosition(pos[0], pos[1]);
+      onContextMenu={(e) => {
+        e.preventDefault();
       }}
+      onMouseDown={(e) => {
+        // left click
+        if (e.button === 0) {
+          let pos = calculatePosition(e);
+          sendPosition(pos[0], pos[1]);
+          // other clicks
+        } else {
+          setDragging(true);
+        }
+      }}
+      onMouseUp={() => setDragging(false)}
       onWheel={(e) => {
         e.stopPropagation();
         zoomIn(e);
       }}
-      onDrag={dragMove}
+      onMouseMove={(e) => {
+        if (dragging) dragMove(e);
+      }}
     >
       {inhabitants.map((inhabitant) => {
-        //var pos = positionToPixels(inhabitant.x, inhabitant.y);
         return (
           <Inhabitant
             key={inhabitant.id}
