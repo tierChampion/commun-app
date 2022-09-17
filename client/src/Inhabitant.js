@@ -13,6 +13,7 @@ import { toPixelSpace, toMapSpace, clamp } from "./spaceChanges";
  * - Highlight the character that is hovered over?
  * - Make the functionality to add the character that was said hello to in a list to not say hello multiple times to the same person
  * - Make the visuals better fit with different scales.
+ *
  */
 
 /**
@@ -36,7 +37,7 @@ function Inhabitant(props) {
   /// Dimensions ///
   const INHABITANT_DIMS = props.characterSize;
   const BUBBLE_WIDTH = 30 + calculateTextWidth(props.userName);
-  const BUTTON_DIMS = clamp(20 * props.zoom, 90, 30);
+  const BUTTON_DIMS = clamp(20 * props.zoom, 90, 40);
 
   /// Positions ///
   const [x, setX] = useState();
@@ -46,14 +47,14 @@ function Inhabitant(props) {
    * Hook to modify the character position when zooming and moving on the map.
    */
   useEffect(() => {
-    var pos = toPixelSpace(props.x, props.y, props.corner, props.zoom, [
+    var pos = toPixelSpace(props.x, props.y, props.center, props.zoom, [
       document.getElementById("Map").clientWidth,
       document.getElementById("Map").clientHeight,
     ]);
 
     setX(pos[0]);
     setY(pos[1]);
-  }, [props.corner, props.zoom]);
+  }, [props.center, props.zoom]);
 
   /// Flags for the different options ///
   const [isFocused, setFocusing] = useState(false);
@@ -177,7 +178,7 @@ function Inhabitant(props) {
                 document.getElementById("Map").clientWidth,
                 document.getElementById("Map").clientHeight,
               ],
-              props.corner,
+              props.center,
               props.zoom
             );
 

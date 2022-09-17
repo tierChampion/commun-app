@@ -8,9 +8,9 @@ import { toMapSpace, clamp } from "./spaceChanges";
 /**
  * TODO here:
  *
- * - Fix the wheel scroll event. Make the middle not move to fast to the mouse
  * - Maybe change the visuals a bit of the map (make it not so monochrome add color ?)
  * - Probably in the app, but find a way to keep the current user in check (accounts)
+ *
  */
 
 function TownMap() {
@@ -21,7 +21,7 @@ function TownMap() {
    */
   const MAX_ZOOM = 5;
   const MIN_ZOOM = 0.1;
-  const [corner, setCorner] = useState([0, 0]);
+  const [center, setCenter] = useState([0.5, 0.5]);
   const [zoom, setZoom] = useState(1);
   const [dragging, setDragging] = useState(false);
 
@@ -49,11 +49,12 @@ function TownMap() {
    * @param {float} y
    */
   const sendPosition = (x, y) => {
-    Axios.post("http://localhost:3001/api/insert", { x: x, y: y }).then(
-      (response) => {
-        setInhabitants((old) => [...old, response.data]);
-      }
-    );
+    Axios.post("http://localhost:3001/api/insert", {
+      x: clamp(x, 1 / MIN_ZOOM, 0),
+      y: clamp(y, 1 / MIN_ZOOM, 0),
+    }).then((response) => {
+      setInhabitants((old) => [...old, response.data]);
+    });
   };
 
   /**
@@ -64,45 +65,30 @@ function TownMap() {
     // Zooming
     var scrollDelta = -event.deltaY;
     var newZoom = zoom + (scrollDelta > 0 ? 0.05 : -0.05) * zoom;
-    setZoom(clamp(newZoom, MAX_ZOOM, MIN_ZOOM));
+    newZoom = clamp(newZoom, MAX_ZOOM, MIN_ZOOM);
+    setZoom(newZoom);
 
-    // Setting the corner of the screen
-    var x = event.clientX - document.getElementById("Map").offsetLeft;
-    var y = event.clientY - document.getElementById("Map").offsetTop;
-
-    var newCenter = toMapSpace(
-      x,
-      y,
-      [
-        document.getElementById("Map").clientWidth,
-        document.getElementById("Map").clientHeight,
-      ],
-      corner,
-      zoom
-    );
-
-    // move slowly to newcenter, interpolate between the centers
-
-    setCorner([
-      clamp(newCenter[0] - 0.5 / zoom, 1 / MIN_ZOOM - 1 / zoom, 0),
-      clamp(newCenter[1] - 0.5 / zoom, 1 / MIN_ZOOM - 1 / zoom, 0),
+    setCenter([
+      clamp(center[0], 1 / MIN_ZOOM - 0.5 / newZoom, 0.5 / newZoom),
+      clamp(center[1], 1 / MIN_ZOOM - 0.5 / newZoom, 0.5 / newZoom),
     ]);
+
+    //console.log(zoom);
   };
 
   const dragMove = (event) => {
-    console.log(event);
-    setCorner([
+    setCenter([
       clamp(
-        corner[0] -
-          event.movementX / document.getElementById("Map").clientWidth,
-        1 / MIN_ZOOM - 1 / zoom,
-        0
+        center[0] -
+          event.movementX / document.getElementById("Map").clientWidth / zoom,
+        1 / MIN_ZOOM - 0.5 / zoom,
+        0.5 / zoom
       ),
       clamp(
-        corner[1] -
-          event.movementY / document.getElementById("Map").clientHeight,
-        1 / MIN_ZOOM - 1 / zoom,
-        0
+        center[1] -
+          event.movementY / document.getElementById("Map").clientHeight / zoom,
+        1 / MIN_ZOOM - 0.5 / zoom,
+        0.5 / zoom
       ),
     ]);
   };
@@ -117,10 +103,10 @@ function TownMap() {
     var y = event.clientY - event.target.offsetTop;
 
     return toMapSpace(
-      x,
-      y,
+      x - 0.5 * PEOPLE_DIM * zoom,
+      y - 0.5 * PEOPLE_DIM * zoom,
       [event.target.clientWidth, event.target.clientHeight],
-      corner,
+      center,
       zoom
     );
   };
@@ -160,7 +146,7 @@ function TownMap() {
             characterSize={PEOPLE_DIM}
             x={inhabitant.x}
             y={inhabitant.y}
-            corner={corner}
+            center={center}
             zoom={zoom}
           />
         );
